@@ -1,0 +1,16 @@
+class OpnSense:
+    HOST = ''
+    INTERFACE_CONFING_URL = 'http://{host}/api/diagnostics/interface/getInterfaceConfig'
+    GET_ACTIVE_WAN_URL = 'http://{host}/api/firewall/alias_util/list/Active_WAN'
+    ADD_ACTIVE_WAN_URL = 'http://{host}/api/firewall/alias_util/add/Active_WAN'
+    DELETE_ACTIVE_WAN_URL = 'http://{host}/api/firewall/alias_util/delete/Active_WAN'
+    KEY = ''
+    SECRET = ''
+    # WANS - wan_name, priority (lower means higher priority)
+    WANS = {}
+
+
+class Gandi:
+    API_KEY = ''
+    DOMAIN = ''
+    MAIN_RECORD_URL = f'https://api.gandi.net/v5/livedns/domains/{DOMAIN}/records/%40/A'
