@@ -22,14 +22,14 @@ class OpnSenseClient:
         response.raise_for_status()
         return response
 
-    def all_gateways(self) -> dict[str, str]:
+    def all_gateways(self) -> dict[str, tuple[str, int]]:
         url = cfg.OpnSense.INTERFACE_CONFING_URL.format(host=self.host)
         response = self.__make_get_request(url)
         rdict = response.json()
-        gateways: dict[str, str] = {}
-        for wan in cfg.OpnSense.WANS.keys():
+        gateways: dict[str, tuple[str, int]] = {}
+        for wan, priority in cfg.OpnSense.WANS.items():
             if wan in rdict:
-                gateways[wan] = rdict[wan]['ipv4'][0]['ipaddr']
+                gateways[wan] = rdict[wan]['ipv4'][0]['ipaddr'], priority
         return gateways
 
     def active_gateway(self) -> tuple[str | None, str]:
@@ -39,8 +39,8 @@ class OpnSenseClient:
         ip = rdict['rows'][0]['ip']
         gateways = self.all_gateways()
         try:
-            wan_name = [wan[0]
-                        for wan in gateways.items() if wan and wan[1] == ip].pop()
+            wan_name = [wan for wan,
+                        (wan_ip, _) in gateways.items() if wan_ip == ip].pop()
             return wan_name, ip
         except IndexError as error:
             print(error)
@@ -70,10 +70,10 @@ class OpnSenseClient:
 
         # new active WAN name has been provided as parameter
         if wan_name and wan_name != old_wan:
-            ip = gateways[wan_name]
+            ip, _ = gateways[wan_name]
             return set_active_wan(ip, old_ip)
         # update current active WAN IP address
-        elif old_wan and (ip := gateways[old_wan]) != old_ip:
+        elif old_wan and (ip := gateways[old_wan][0]) != old_ip:
             return set_active_wan(ip, old_ip)
 
         return False
@@ -117,23 +117,28 @@ def main():
 
     opnclient.update_active_gateway()
     current_gateway, current_ip = opnclient.active_gateway()
+    available_gateways = opnclient.all_gateways()
 
-    # gateway is alive -> check if public IP changed
+    priority_gateway, (priority_ip, _) = min(available_gateways.items(),
+                                             key=lambda item: item[1][1])
+
+    # gateway is alive
     if current_gateway:
+        # check if gateway with higher priority is available
+        if priority_gateway != current_gateway:
+            opnclient.update_active_gateway(priority_gateway)
+            current_gateway, current_ip = priority_gateway, priority_ip
+
+        # check if public IP changed
         domain_ip = gandiclient.domain_ip()
         if current_ip != domain_ip:
             gandiclient.set_domain_ip(current_ip)
 
-    # gateway is dead -> replace with other active gateway
+    # gateway is dead -> replace with available gateway with the highest priority 
     else:
-        gateways = opnclient.all_gateways()
-        available_wans = {gw: cfg.OpnSense.WANS[gw]
-                          for gw in gateways.keys() if gw in cfg.OpnSense.WANS}
-        wan_name = min(available_wans, key=lambda k: available_wans[k])
+        opnclient.update_active_gateway(priority_gateway)
 
-        opnclient.update_active_gateway(wan_name)
-
-        gandiclient.set_domain_ip(gateways[wan_name])
+        gandiclient.set_domain_ip(priority_ip)
 
 
 if __name__ == '__main__':
