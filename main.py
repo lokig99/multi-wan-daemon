@@ -115,6 +115,7 @@ def main():
     opnclient = OpnSenseClient(cfg.OpnSense.HOST)
     gandiclient = GandiClient()
 
+    opnclient.update_active_gateway()
     current_gateway, current_ip = opnclient.active_gateway()
 
     # gateway is alive -> check if public IP changed
