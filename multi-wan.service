@@ -1,0 +1,19 @@
+[Unit]
+Description = Dual WAN and Dynamic DNS daemon using OPNsense and Gandi.net APIs
+# start after network interfaces are made available
+After = network.target
+
+[Service]
+Type = simple
+ExecStart = python3 /git/multi-wan-daemon/main.py
+User = root
+Group = root
+# Restart when there are errors
+Restart = on-failure
+SyslogIdentifier = Multi-WAN-Daemon
+RestartSec = 5
+TimeoutStartSec = infinity
+
+[Install]
+# Make it accessible to other users
+WantedBy = multi-user.target
