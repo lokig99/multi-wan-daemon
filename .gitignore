@@ -1,8 +1,9 @@
 # development
 .venv
-.vscode
 .idea
+.vscode
 __pycache__
 
 # config
-config.py
+/settings.json
+/interfaces.json

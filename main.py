@@ -1,5 +1,5 @@
-import time
 import logging as log
+import time
 from typing import Any
 
 import requests
@@ -80,14 +80,17 @@ class OpnSenseClient:
         ACTIVE_GATEWAY_NAME = 'actgwname'
         ACTIVE_GATEWAY_IP = 'actgwip'
 
-    def __init__(self, host: str | None = None, wans: dict[str, tuple[int, str]] | None = None,
-                 key: str | None = None, secret: str | None = None) -> None:
-        self.__host = host if host else cfg.OpnSense.HOST
-        self.__wans = wans if wans else cfg.OpnSense.WANS
-        self.__key = key if key else cfg.OpnSense.KEY
-        self.__secret = secret if secret else cfg.OpnSense.SECRET
+    def __init__(self, config: cfg.OpnSenseConfig) -> None:
+        self.__host = config.host
+        self.__wans = config.wans[:]
+        self.__key = config.key
+        self.__secret = config.secret
         self.__cache = Cache()
         self.__consts = self.Consts(self.__host)
+
+    @staticmethod
+    def with_default_config() -> 'OpnSenseClient':
+        return OpnSenseClient(cfg.OpnSenseConfig.defaults())
 
     def __make_get_request(self, url: str) -> dict[str, Any]:
         response = requests.get(url, auth=(self.__key, self.__secret))
@@ -105,7 +108,7 @@ class OpnSenseClient:
             r = self.__make_get_request(self.__consts.INTERFACE_CONFING_URL)
             # gateways: dict[str, tuple[str, int, str]]
             gateways = {}
-            for wan, (priority, id) in self.__wans.items():
+            for wan, priority, id in ((w.name, w.priority, w.id) for w in self.__wans):
                 if wan in r and (ipv4 := r[wan]['ipv4']):
                     gateways[wan] = ipv4[0]['ipaddr'], priority, id
             self.__cache[self.CacheKeys.ALL_GATEWAYS] = gateways, 5
@@ -207,11 +210,15 @@ class GandiClient:
     class CacheKeys:
         DOMAIN_IP = 'domip'
 
-    def __init__(self, domain: str | None = None, apikey: str | None = None) -> None:
-        self.__domain = domain if domain else cfg.Gandi.DOMAIN
-        self.__apikey = apikey if apikey else cfg.Gandi.API_KEY
+    def __init__(self, config: cfg.GandiConfig) -> None:
+        self.__domain = config.domain
+        self.__apikey = config.apikey
         self.__cache = Cache()
         self.__consts = self.Consts(self.__domain)
+
+    @staticmethod
+    def with_default_config() -> 'GandiClient':
+        return GandiClient(cfg.GandiConfig.defaults())
 
     def __make_get_request(self, url: str) -> dict[str, Any]:
         response = requests.get(
@@ -297,11 +304,15 @@ def main():
         except Exception as e:
             log.error('Exception occured while executing daemon job', exc_info=e)
 
-    opnclient = OpnSenseClient()
-    gandiclient = GandiClient()
-
-    schedule.every(10).seconds.do(
-        job, opnclient=opnclient, gandiclient=gandiclient)
+    try:
+        opnclient = OpnSenseClient.with_default_config()
+        gandiclient = GandiClient.with_default_config()
+        schedule.every(10).seconds.do(
+            job, opnclient=opnclient, gandiclient=gandiclient)
+    except cfg.DefaultsMissingException as e:
+        log.error('Exception occured while configuring clients', exc_info=e)
+        import sys
+        sys.exit(1)
 
     while True:
         schedule.run_pending()
