@@ -78,24 +78,27 @@ class DefaultsMissingException(Exception):
 
 
 class OpnSenseConfig:
-    def __init__(self, host: str, key: str, secret: str, wans: list[Interface]) -> None:
+    def __init__(self, host: str, key: str, secret: str, wans: list[Interface], use_https: bool = True) -> None:
         self.host = host
         self.key = key
         self.secret = secret
         self.wans = wans
+        self.use_https = use_https
 
     @staticmethod
     def defaults() -> 'OpnSenseConfig':
         host = _get_settings_value('opnsense', 'host', 'OPNSENSE_HOST')
         key = _get_settings_value('opnsense', 'key', 'OPNSENSE_KEY')
         secret = _get_settings_value('opnsense', 'secret', 'OPNSENSE_SECRET')
+        use_https = https if (https := _get_settings_value(
+            'opnsense', 'use_https', 'OPNSENSE_USE_HTTPS')) else True
         wans: list[Interface] = _get_interfaces()
         if not host or not key or not secret or not wans:
             missing = (v[1] for v in ((host, 'host'), (key, 'key'),
                        (secret, 'secret'), (wans, 'interfaces (wans)')) if not v[0])
             raise DefaultsMissingException(
                 f'OPNsense config is incomplete, fields missing: {", ".join(missing)}')
-        return OpnSenseConfig(host, key, secret, wans)
+        return OpnSenseConfig(host, key, secret, wans, use_https)
 
 
 class GandiConfig:

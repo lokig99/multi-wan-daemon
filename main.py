@@ -53,26 +53,27 @@ class Cache:
 
 class OpnSenseClient:
     class Consts:
-        __INTERFACE_CONFING_URL__ = 'http://{host}/api/diagnostics/interface/getInterfaceConfig'
+        __INTERFACE_CONFING_URL__ = '{protocol}://{host}/api/diagnostics/interface/getInterfaceConfig'
         ACTIVE_WAN_ALIAS = 'Active_WAN'
         ACTIVE_WAN_ID_ALIAS = 'Active_WAN_Id'
-        __GET_ALIAS_URL__ = 'http://{host}/api/firewall/alias_util/list/{alias}'
-        __ADD_ALIAS_URL__ = 'http://{host}/api/firewall/alias_util/add/{alias}'
-        __DELETE_ALIAS_URL__ = 'http://{host}/api/firewall/alias_util/delete/{alias}'
+        __GET_ALIAS_URL__ = '{protocol}://{host}/api/firewall/alias_util/list/{alias}'
+        __ADD_ALIAS_URL__ = '{protocol}://{host}/api/firewall/alias_util/add/{alias}'
+        __DELETE_ALIAS_URL__ = '{protocol}://{host}/api/firewall/alias_util/delete/{alias}'
 
-        def __init__(self, host: str) -> None:
+        def __init__(self, host: str, use_https: bool) -> None:
             self.__host = host
+            self.__protocol = 'https' if use_https else 'http'
             self.INTERFACE_CONFING_URL = self.__INTERFACE_CONFING_URL__.format(
-                host=host)
+                protocol=self.__protocol, host=host)
 
         def get_alias_url(self, alias: str) -> str:
-            return self.__GET_ALIAS_URL__.format(host=self.__host, alias=alias)
+            return self.__GET_ALIAS_URL__.format(protocol=self.__protocol, host=self.__host, alias=alias)
 
         def add_alias_url(self, alias: str) -> str:
-            return self.__ADD_ALIAS_URL__.format(host=self.__host, alias=alias)
+            return self.__ADD_ALIAS_URL__.format(protocol=self.__protocol, host=self.__host, alias=alias)
 
         def delete_alias_url(self, alias: str) -> str:
-            return self.__DELETE_ALIAS_URL__.format(host=self.__host, alias=alias)
+            return self.__DELETE_ALIAS_URL__.format(protocol=self.__protocol, host=self.__host, alias=alias)
 
     class CacheKeys:
         ALL_GATEWAYS = 'allactgw'
@@ -86,7 +87,7 @@ class OpnSenseClient:
         self.__key = config.key
         self.__secret = config.secret
         self.__cache = Cache()
-        self.__consts = self.Consts(self.__host)
+        self.__consts = self.Consts(self.__host, config.use_https)
 
     @staticmethod
     def with_default_config() -> 'OpnSenseClient':
