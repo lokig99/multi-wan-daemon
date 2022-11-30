@@ -29,20 +29,23 @@ class Cache:
         self.__store: dict[str, tuple[Any, float]] = {}
 
     def __contains__(self, key: str) -> bool:
-        return key in self.__store
-
-    def __getitem__(self, key: str) -> Any | None:
         if key in self.__store:
-            value, expiration_time = self.__store[key]
+            _, expiration_time = self.__store[key]
             now = time.time()
             if now < expiration_time:
-                return value
+                return True
             # value expired
             del self.__store[key]
+        return False
+
+    def __getitem__(self, key: str) -> Any | None:
+        if key in self:
+            value, _ = self.__store[key]
+            return value
         return None
 
     def __delitem__(self, key: str):
-        if key in self.__store:
+        if key in self:
             del self.__store[key]
 
     def __setitem__(self, key: str, value: tuple[Any, float]):
@@ -260,6 +263,10 @@ def daemon(opnclient: OpnSenseClient, gandiclient: GandiClient):
     opnclient.update_active_gateway()
     current_gateway, current_ip = opnclient.active_gateway()
     available_gateways = opnclient.all_gateways()
+
+    if not available_gateways:
+        log.error("No gateways available!")
+        return
 
     priority_gateway, (priority_ip, _, _) = min(available_gateways.items(),
                                                 key=lambda item: item[1][1])
