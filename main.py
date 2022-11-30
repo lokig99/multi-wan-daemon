@@ -96,8 +96,9 @@ class OpnSenseClient:
     def with_default_config() -> 'OpnSenseClient':
         return OpnSenseClient(cfg.OpnSenseConfig.defaults())
 
-    def __make_get_request(self, url: str) -> dict[str, Any]:
-        response = requests.get(url, auth=(self.__key, self.__secret))
+    def __make_get_request(self, url: str, timeout=5) -> dict[str, Any]:
+        response = requests.get(url, auth=(
+            self.__key, self.__secret), timeout=timeout)
         response.raise_for_status()
         return response.json()
 
@@ -224,9 +225,9 @@ class GandiClient:
     def with_default_config() -> 'GandiClient':
         return GandiClient(cfg.GandiConfig.defaults())
 
-    def __make_get_request(self, url: str) -> dict[str, Any]:
+    def __make_get_request(self, url: str, timeout=5) -> dict[str, Any]:
         response = requests.get(
-            url, headers={'Authorization': f'Apikey {self.__apikey}'})
+            url, headers={'Authorization': f'Apikey {self.__apikey}'}, timeout=timeout)
         response.raise_for_status()
         return response.json()
 
