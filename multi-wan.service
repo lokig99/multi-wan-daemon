@@ -1,5 +1,5 @@
 [Unit]
-Description = Dual WAN and Dynamic DNS daemon using OPNsense and Gandi.net APIs
+Description = Multi WAN and Dynamic DNS daemon using OPNsense and Gandi.net APIs
 # start after network interfaces are made available
 After = network.target
 
