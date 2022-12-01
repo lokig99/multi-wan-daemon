@@ -78,18 +78,23 @@ class DefaultsMissingException(Exception):
 
 
 class OpnSenseConfig:
-    def __init__(self, host: str, key: str, secret: str, wans: list[Interface], use_https: bool = True) -> None:
+    __DEFAULT_TIMEOUT__ = 5
+
+    def __init__(self, host: str, key: str, secret: str, wans: list[Interface], use_https: bool = True, timeout=__DEFAULT_TIMEOUT__) -> None:
         self.host = host
         self.key = key
         self.secret = secret
         self.wans = wans
         self.use_https = use_https
+        self.timeout = timeout
 
     @staticmethod
     def defaults() -> 'OpnSenseConfig':
         host = _get_settings_value('opnsense', 'host', 'OPNSENSE_HOST')
         key = _get_settings_value('opnsense', 'key', 'OPNSENSE_KEY')
         secret = _get_settings_value('opnsense', 'secret', 'OPNSENSE_SECRET')
+        timeout = int(t) if (t := _get_settings_value(
+            'opnsense', 'timeout', 'OPNSENSE_TIMEOUT')) else OpnSenseConfig.__DEFAULT_TIMEOUT__ 
         use_https = https if (https := _get_settings_value(
             'opnsense', 'use_https', 'OPNSENSE_USE_HTTPS')) else True
         wans: list[Interface] = _get_interfaces()
@@ -98,7 +103,7 @@ class OpnSenseConfig:
                        (secret, 'secret'), (wans, 'interfaces (wans)')) if not v[0])
             raise DefaultsMissingException(
                 f'OPNsense config is incomplete, fields missing: {", ".join(missing)}')
-        return OpnSenseConfig(host, key, secret, wans, use_https)
+        return OpnSenseConfig(host, key, secret, wans, use_https, timeout)
 
 
 class GandiConfig:

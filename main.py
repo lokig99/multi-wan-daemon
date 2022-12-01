@@ -91,14 +91,15 @@ class OpnSenseClient:
         self.__secret = config.secret
         self.__cache = Cache()
         self.__consts = self.Consts(self.__host, config.use_https)
+        self.__timeout = config.timeout
 
     @staticmethod
     def with_default_config() -> 'OpnSenseClient':
         return OpnSenseClient(cfg.OpnSenseConfig.defaults())
 
-    def __make_get_request(self, url: str, timeout=5) -> dict[str, Any]:
+    def __make_get_request(self, url: str) -> dict[str, Any]:
         response = requests.get(url, auth=(
-            self.__key, self.__secret), timeout=timeout)
+            self.__key, self.__secret), timeout=self.__timeout)
         response.raise_for_status()
         return response.json()
 
