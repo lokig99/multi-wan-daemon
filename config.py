@@ -94,7 +94,7 @@ class OpnSenseConfig:
         key = _get_settings_value('opnsense', 'key', 'OPNSENSE_KEY')
         secret = _get_settings_value('opnsense', 'secret', 'OPNSENSE_SECRET')
         timeout = int(t) if (t := _get_settings_value(
-            'opnsense', 'timeout', 'OPNSENSE_TIMEOUT')) else OpnSenseConfig.__DEFAULT_TIMEOUT__ 
+            'opnsense', 'timeout', 'OPNSENSE_TIMEOUT')) else OpnSenseConfig.__DEFAULT_TIMEOUT__
         use_https = https if (https := _get_settings_value(
             'opnsense', 'use_https', 'OPNSENSE_USE_HTTPS')) else True
         wans: list[Interface] = _get_interfaces()
@@ -125,3 +125,20 @@ class GandiConfig:
 
 class Logging:
     LEVEL = _get_logging_level()
+
+
+class HealthChecks:
+    def __init__(self, url: str | None, enabled=False) -> None:
+        self.url = url
+        self.enabled = enabled
+
+    @staticmethod
+    def defaults() -> 'HealthChecks':
+        url = _get_settings_value('health', 'url', 'HEALTH_URL')
+        enabled = bool(e) if (e := _get_settings_value(
+            'health', 'enabled', 'HEALTH_ENABLED')) else False
+        if enabled and not url:
+            missing = (v[1] for v in ((url, 'url'),) if not v[0])
+            raise DefaultsMissingException(
+                f'HealthChecks config is incomplete, fields missing: {", ".join(missing)}')
+        return HealthChecks(url, enabled)

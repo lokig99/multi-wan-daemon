@@ -259,9 +259,12 @@ class GandiClient:
         return success
 
 
-def daemon(opnclient: OpnSenseClient, gandiclient: GandiClient):
+def daemon(opnclient: OpnSenseClient, gandiclient: GandiClient, healthchecks_config: cfg.HealthChecks):
     log.info("Starting new daemon job...")
+    if healthchecks_config.enabled:
+        requests.get(f'{healthchecks_config.url}/start', timeout=10)
     start_time = time.time()
+    
     opnclient.update_active_gateway()
     current_gateway, current_ip = opnclient.active_gateway()
     available_gateways = opnclient.all_gateways()
@@ -303,22 +306,25 @@ def daemon(opnclient: OpnSenseClient, gandiclient: GandiClient):
         gandiclient.set_domain_ip(priority_ip)
 
     end_time = time.time()
+    if healthchecks_config.enabled:
+        requests.get(healthchecks_config.url, timeout=10)
     log.info(
         f'Daemon job finished succesfully in {round(end_time - start_time, 3)} seconds')
 
 
 def main():
-    def job(opnclient: OpnSenseClient, gandiclient: GandiClient):
+    def job(opnclient: OpnSenseClient, gandiclient: GandiClient, healthchecks_config: cfg.HealthChecks):
         try:
-            daemon(opnclient, gandiclient)
+            daemon(opnclient, gandiclient, healthchecks_config)
         except Exception as e:
             log.error('Exception occured while executing daemon job', exc_info=e)
 
     try:
         opnclient = OpnSenseClient.with_default_config()
         gandiclient = GandiClient.with_default_config()
+        healthchecks_config = cfg.HealthChecks.defaults()
         schedule.every(10).seconds.do(
-            job, opnclient=opnclient, gandiclient=gandiclient)
+            job, opnclient=opnclient, gandiclient=gandiclient, healthchecks_config=healthchecks_config)
     except cfg.DefaultsMissingException as e:
         log.error('Exception occured while configuring clients', exc_info=e)
         import sys
