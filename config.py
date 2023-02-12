@@ -125,6 +125,59 @@ class DefaultsMissingException(Exception):
     pass
 
 
+class InvalidConfigException(Exception):
+    """
+    The exception that is thrown when the configuration is invalid.
+    """
+    pass
+
+
+class OpnSenseConfig:
+    __DEFAULT_TIMEOUT__ = 5
+
+    def __init__(self, host: str, key: str, secret: str, wans: list[Interface], use_https: bool = True, timeout=__DEFAULT_TIMEOUT__) -> None:
+        self.host = host
+        self.key = key
+        self.secret = secret
+        self.wans = wans
+        self.use_https = use_https
+        self.timeout = timeout
+
+    @staticmethod
+    def defaults() -> 'OpnSenseConfig':
+        host = get_settings_value('opnsense', 'host', 'OPNSENSE_HOST')
+        key = get_settings_value('opnsense', 'key', 'OPNSENSE_KEY')
+        secret = get_settings_value('opnsense', 'secret', 'OPNSENSE_SECRET')
+        timeout = int(t) if (t := get_settings_value(
+            'opnsense', 'timeout', 'OPNSENSE_TIMEOUT')) else OpnSenseConfig.__DEFAULT_TIMEOUT__
+        use_https = https if (https := get_settings_value(
+            'opnsense', 'use_https', 'OPNSENSE_USE_HTTPS')) else True
+        wans: list[Interface] = get_interfaces()
+        if not host or not key or not secret or not wans:
+            missing = (v[1] for v in ((host, 'host'), (key, 'key'),
+                       (secret, 'secret'), (wans, 'interfaces (wans)')) if not v[0])
+            raise DefaultsMissingException(
+                f'OPNsense config is incomplete, fields missing: {", ".join(missing)}')
+        return OpnSenseConfig(host, key, secret, wans, use_https, timeout)
+
+
+class GandiConfig:
+    def __init__(self, domain: str, apikey: str) -> None:
+        self.apikey = apikey
+        self.domain = domain
+
+    @staticmethod
+    def defaults() -> 'GandiConfig':
+        api_key = get_settings_value('gandi', 'apikey', 'GANDI_API_KEY')
+        domain = get_settings_value('gandi', 'domain', 'GANDI_DOMAIN')
+        if not api_key or not domain:
+            missing = (v[1] for v in ((api_key, 'apikey'),
+                       (domain, 'domain')) if not v[0])
+            raise DefaultsMissingException(
+                f'Gandi.net config is incomplete, fields missing: {", ".join(missing)}')
+        return GandiConfig(domain, api_key)
+
+
 class Logging:
     """
     The Logging configuration class.
@@ -153,17 +206,23 @@ class HealthChecks:
         Raises:
         -------
             `DefaultsMissingException`: If the required default values are missing.
+            `InvalidConfigException`: If the `health.enabled` value is not `true` or `false`.
 
         Returns:
         --------
             `HealthChecks` - The default values for the healthchecks.io service.
         """
-        enabled = bool(e) if (e := get_settings_value(
-            'health', 'enabled', 'HEALTH_ENABLED')) else False
-        if not enabled:
-            return HealthChecks('', enabled)
-
-        if not (url := get_settings_value('health', 'url', 'HEALTH_URL')):
+        url = get_settings_value('health', 'url', 'HEALTH_URL')
+        value = get_settings_value('health', 'enabled', 'HEALTH_ENABLED')
+        if value.lower() == 'true':
+            enabled = True
+        elif value.lower() == 'false':
+            enabled = False
+        else:
+            raise InvalidConfigException(
+                f'invalid value for health.enabled, must be "true" or "false" but was: "{value}"')
+            
+        if enabled and not url:
             missing = (v[1] for v in ((url, 'url'),) if not v[0])
             raise DefaultsMissingException(
                 f'HealthChecks config is incomplete, fields missing: {", ".join(missing)}')
