@@ -77,6 +77,10 @@ class DefaultsMissingException(Exception):
     pass
 
 
+class InvalidConfigException(Exception):
+    pass
+
+
 class OpnSenseConfig:
     __DEFAULT_TIMEOUT__ = 5
 
@@ -135,8 +139,15 @@ class HealthChecks:
     @staticmethod
     def defaults() -> 'HealthChecks':
         url = _get_settings_value('health', 'url', 'HEALTH_URL')
-        enabled = bool(e) if (e := _get_settings_value(
-            'health', 'enabled', 'HEALTH_ENABLED')) else False
+        value = _get_settings_value('health', 'enabled', 'HEALTH_ENABLED')
+        if value.lower() == 'true':
+            enabled = True
+        elif value.lower() == 'false':
+            enabled = False
+        else:
+            raise InvalidConfigException(
+                f'invalid value for health.enabled, must be "true" or "false" but was: "{value}"')
+            
         if enabled and not url:
             missing = (v[1] for v in ((url, 'url'),) if not v[0])
             raise DefaultsMissingException(
