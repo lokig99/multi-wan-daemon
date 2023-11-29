@@ -4,6 +4,11 @@
 .vscode
 __pycache__
 
+# tests and coverage
+.pytest_cache
+htmlcov
+.coverage
+
 # config
 /settings.json
 /interfaces.json

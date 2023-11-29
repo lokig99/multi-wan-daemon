@@ -20,12 +20,12 @@ class OpnSenseConfig:
 
         Args:
         -----
-            `host` (str): The hostname or IP address of the OPNsense server.
-            `key` (str): The API key for the OPNsense server.
-            `secret` (str): The API secret for the OPNsense server.
-            `wans` (list[Interface]): The list of WAN interfaces in a form of `Interface` objects.
-            `use_https` (bool, optional): Whether to use HTTPS or HTTP. Defaults to `True`.
-            `timeout` (_type_, optional): The timeout for requests in seconds. Defaults to `5`.
+            - `host` (str): The hostname or IP address of the OPNsense server.
+            - `key` (str): The API key for the OPNsense server.
+            - `secret` (str): The API secret for the OPNsense server.
+            - `wans` (list[Interface]): The list of WAN interfaces in a form of `Interface` objects.
+            - `use_https` (bool, optional): Whether to use HTTPS or HTTP. Defaults to `True`.
+            - `timeout` (_type_, optional): The timeout for requests in seconds. Defaults to `5`.
         """
         self.host = host
         """The hostname or IP address of the OPNsense server."""
@@ -395,3 +395,19 @@ class OpnSenseClient:
             return set_active_wan(ip, old_gw.ip)
 
         return False
+    
+    def priority_gateway(self) -> Gateway:
+        """
+        Get the gateway with the highest priority from all available gateways. 
+        
+        note: If multiple gateways have the same priority, the gateway with the lowest name will be returned.
+        
+
+        Returns:
+        --------
+        `Gateway`: The gateway with the highest priority.
+        """
+        available_gateways = self.all_gateways()
+        _, priority_gateway = min(available_gateways.items(),
+                              key=lambda item: item[1].priority)
+        return priority_gateway

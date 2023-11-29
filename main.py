@@ -23,7 +23,9 @@ def daemon(opnclient: OpnSenseClient, gandiclient: GandiClient, healthchecks_con
     Args:
     -----
         `opnclient` (OpnSenseClient): The OpnSense client instance that handles gateways on the router.
+        
         `gandiclient` (GandiClient): The Gandi client instance that handles DNS records.
+        
         `healthchecks_config` (HealthChecks): The configuration for the HealthChecks.io service.
     """
     log.info("Starting new daemon job...")
@@ -38,9 +40,9 @@ def daemon(opnclient: OpnSenseClient, gandiclient: GandiClient, healthchecks_con
     if not available_gateways:
         log.error("No gateways available!")
         return
-
-    _, priority_gateway = min(available_gateways.items(),
-                              key=lambda item: item[1].priority)
+    
+    priority_gateway = opnclient.priority_gateway()
+    
     log.info(f'Available gateways: {available_gateways}')
     log.info(f'Current gateway: {current_gateway.name} --- {current_gateway.ip}')
     log.info(f'Priority gateway: {priority_gateway.name} --- {priority_gateway.ip}')
